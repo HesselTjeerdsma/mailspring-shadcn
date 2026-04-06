@@ -173,20 +173,44 @@ export function MessageDetail() {
   const { focusedThread } = useFocusStore();
   const { messages, loading } = useMessages();
 
+  // Filter messages to those belonging to the focused thread
+  const threadMessages = focusedThread
+    ? messages.filter((m) => m.threadId === focusedThread.id)
+    : [];
+  const hasRealMessages = isMailspringAvailable() && threadMessages.length > 0;
+
   if (!focusedThread) {
     return <EmptyState />;
   }
 
+  const lastMessage = threadMessages.length > 0 ? threadMessages[threadMessages.length - 1] : undefined;
+
   const handleReply = () =>
-    bridgeAction(() => getActions().composeReply({ threadId: focusedThread.id, type: 'reply' }));
+    bridgeAction(() =>
+      getActions().composeReply({
+        thread: focusedThread,
+        message: lastMessage,
+        type: 'reply',
+        behavior: 'prefer-existing',
+        popout: true,
+      })
+    );
 
   const handleReplyAll = () =>
     bridgeAction(() =>
-      getActions().composeReply({ threadId: focusedThread.id, type: 'reply-all' })
+      getActions().composeReply({
+        thread: focusedThread,
+        message: lastMessage,
+        type: 'reply-all',
+        behavior: 'prefer-existing',
+        popout: true,
+      })
     );
 
   const handleForward = () =>
-    bridgeAction(() => getActions().composeForward({ threadId: focusedThread.id }));
+    bridgeAction(() =>
+      getActions().composeForward({ thread: focusedThread, message: lastMessage, popout: true })
+    );
 
   const handlePopout = () =>
     bridgeAction(() => getActions().popoutThread(focusedThread));
@@ -230,10 +254,6 @@ export function MessageDetail() {
       });
       getActions().queueTask(task);
     });
-
-  // Filter messages to those belonging to the focused thread
-  const threadMessages = messages.filter((m) => m.threadId === focusedThread.id);
-  const hasRealMessages = isMailspringAvailable() && threadMessages.length > 0;
 
   return (
     <div className="flex h-full flex-col bg-muted/30">

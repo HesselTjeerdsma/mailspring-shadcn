@@ -103,6 +103,15 @@
     cursor: default;
   }
 
+  /* Electron: window dragging */
+  .app-drag {
+    -webkit-app-region: drag;
+  }
+
+  .app-no-drag {
+    -webkit-app-region: no-drag;
+  }
+
   /* Scrollbar styling */
   ::-webkit-scrollbar {
     width: 6px;
