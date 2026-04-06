@@ -23,8 +23,8 @@ import AppEnvClass from './app-env';
 window.AppEnv = new AppEnvClass();
 
 // Start the root window initialization.
-// This activates packages, loads keymaps, initializes the mailsync bridge, etc.
-// Once complete, the new UI is injected.
+// In new-ui mode this skips the legacy renderer mount and package activation,
+// but still sets up the window shell, keymaps, menus, and bridge infrastructure.
 AppEnv.startRootWindow();
 
 // The new UI entry point is loaded separately via the HTML file.

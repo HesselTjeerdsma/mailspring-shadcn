@@ -246,6 +246,7 @@ export default class WindowManager {
       title: localized('Message Viewer'),
       toolbar: true,
       neverClose: true,
+      renderNewUI: process.argv.includes('--new-ui'),
       bootstrapScript: process.argv.includes('--new-ui')
         ? require.resolve('../window-bootstrap-v2')
         : require.resolve('../window-bootstrap'),

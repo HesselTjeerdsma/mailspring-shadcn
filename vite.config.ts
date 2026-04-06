@@ -10,7 +10,6 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    // Electron renderer needs CJS interop
     rollupOptions: {
       external: [
         'electron',
@@ -30,6 +29,11 @@ export default defineConfig({
         'http',
         'https',
       ],
+      output: {
+        assetFileNames: 'assets/[name][extname]',
+        chunkFileNames: 'assets/[name].js',
+        entryFileNames: 'assets/[name].js',
+      },
     },
   },
   resolve: {

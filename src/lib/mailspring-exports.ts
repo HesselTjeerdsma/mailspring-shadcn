@@ -43,6 +43,8 @@ export const getCategory = () => getMailspring().Category;
 export const getFolder = () => getMailspring().Folder;
 export const getLabel = () => getMailspring().Label;
 export const getFile = () => getMailspring().File;
+export const getTaskFactory = () => getMailspring().TaskFactory;
+export const getDraftFactory = () => getMailspring().DraftFactory;
 
 /**
  * Check if the Mailspring bridge is available (i.e. running inside Electron

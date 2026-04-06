@@ -634,12 +634,14 @@ export default class AppEnvConstructor {
   }
 
   async startWindow() {
-    const { windowType } = this.getLoadSettings();
+    const { windowType, renderNewUI } = this.getLoadSettings();
 
-    this.themes.loadStaticStylesheets();
-    this.initializeBasicSheet();
-    this.initializeReactRoot();
-    this.packages.activatePackages(windowType);
+    if (!renderNewUI) {
+      this.themes.loadStaticStylesheets();
+      this.initializeBasicSheet();
+      this.initializeReactRoot();
+      this.packages.activatePackages(windowType);
+    }
 
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(() => {

@@ -1,65 +1,77 @@
-import { Group, Panel, Separator as ResizeHandle } from 'react-resizable-panels';
+import { Group, Panel, Separator as ResizeHandle, useDefaultLayout } from 'react-resizable-panels';
 import { Sidebar } from './sidebar';
 import { Toolbar } from './toolbar';
 import { ThreadList } from '../threads/thread-list';
 import { MessageDetail } from '../messages/message-detail';
 import { useUIStore } from '@/stores/ui-store';
 
+function ResizeBar() {
+  return (
+    <ResizeHandle className="group relative w-px bg-border hover:bg-ring/50 active:bg-ring/50">
+      <div className="absolute inset-y-0 -left-1.5 w-3 cursor-col-resize group-hover:bg-ring/20 group-active:bg-ring/40 transition-colors" />
+    </ResizeHandle>
+  );
+}
+
 export function AppLayout() {
   const { sidebarCollapsed, layoutMode } = useUIStore();
+
+  const { defaultLayout, onLayoutChanged } = useDefaultLayout({
+    id: 'mailspring-main',
+    storage: localStorage,
+  });
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
       <Toolbar />
-      <div className="flex flex-1 overflow-hidden">
-        <Group direction="horizontal">
-          {/* Sidebar */}
-          {!sidebarCollapsed && (
-            <>
-              <Panel
-                id="sidebar"
-                order={1}
-                defaultSize={18}
-                minSize={14}
-                maxSize={28}
-                className="flex flex-col min-w-[180px]"
-              >
-                <Sidebar />
-              </Panel>
-              <ResizeHandle className="w-px bg-border hover:bg-ring transition-colors" />
-            </>
-          )}
+      <Group
+        orientation="horizontal"
+        className="flex-1 overflow-hidden"
+        defaultLayout={defaultLayout}
+        onLayoutChanged={onLayoutChanged}
+      >
+        {/* Sidebar */}
+        {!sidebarCollapsed && (
+          <>
+            <Panel
+              id="sidebar"
+              defaultSize={18}
+              minSize="180px"
+              maxSize="320px"
+              className="flex flex-col overflow-hidden"
+            >
+              <Sidebar />
+            </Panel>
+            <ResizeBar />
+          </>
+        )}
 
-          {/* Thread List */}
-          <Panel
-            id="thread-list"
-            order={2}
-            defaultSize={32}
-            minSize={22}
-            maxSize={50}
-            className="flex flex-col min-w-[280px]"
-          >
-            <ThreadList />
-          </Panel>
+        {/* Thread List */}
+        <Panel
+          id="thread-list"
+          defaultSize={32}
+          minSize="240px"
+          className="flex flex-col overflow-hidden"
+        >
+          <ThreadList />
+        </Panel>
 
-          {layoutMode !== 'list' && (
-            <>
-              <ResizeHandle className="w-px bg-border hover:bg-ring transition-colors" />
+        {layoutMode !== 'list' && (
+          <>
+            <ResizeBar />
 
-              {/* Message Detail */}
-              <Panel
-                id="message-detail"
-                order={3}
-                defaultSize={50}
-                minSize={30}
-                className="flex flex-col"
-              >
-                <MessageDetail />
-              </Panel>
-            </>
-          )}
-        </Group>
-      </div>
+            {/* Message Detail */}
+            <Panel
+              id="message-detail"
+              defaultSize={50}
+              minSize="300px"
+              className="flex flex-col overflow-hidden"
+            >
+              <MessageDetail />
+            </Panel>
+          </>
+        )}
+      </Group>
     </div>
   );
 }

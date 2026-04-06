@@ -79,7 +79,7 @@ export function Sidebar() {
   return (
     <div className="flex h-full flex-col bg-sidebar">
       {/* Account selector */}
-      <div className="no-select flex items-center gap-2 border-b border-sidebar-border px-3 py-3">
+      <div className="no-select flex h-[49px] items-center gap-2 border-b border-sidebar-border px-3">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <User className="h-4 w-4" />
         </div>
