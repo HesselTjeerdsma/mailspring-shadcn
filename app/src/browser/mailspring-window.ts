@@ -30,6 +30,7 @@ export interface MailspringWindowSettings {
   configDirPath?: string;
   autoHideMenuBar?: boolean;
   bootstrapScript?: string;
+  renderNewUI?: boolean;
   appVersion?: string;
   shellLoadTime?: number;
   // Allow additional properties for extensibility
@@ -249,7 +250,9 @@ export default class MailspringWindow extends EventEmitter {
 
     return url.format({
       protocol: 'file',
-      pathname: `${this.resourcePath}/static/index.html`,
+      pathname: loadSettings.renderNewUI
+        ? `${this.resourcePath}/static/index-v2.html`
+        : `${this.resourcePath}/static/index.html`,
       slashes: true,
       query: { loadSettings: JSON.stringify(loadSettings) },
     });

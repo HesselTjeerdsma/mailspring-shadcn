@@ -38,6 +38,7 @@ n1_cloud_dist
 
 # Built client
 app/dist
+dist
 
 # Tests
 spec-saved-state.json
