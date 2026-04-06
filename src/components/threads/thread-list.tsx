@@ -1,101 +1,10 @@
-import { Star, Paperclip } from 'lucide-react';
+import { Star, Paperclip, Loader2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { useFocusStore } from '@/stores/focus-store';
+import { useThreadStore } from '@/stores/thread-store';
 import type { Thread } from '@/types/models';
 import { cn } from '@/lib/utils';
 import { isMailspringAvailable, getActions, getTaskFactory } from '@/lib/mailspring-exports';
-
-// Mock data for development - will be replaced by real data from DatabaseStore
-const MOCK_THREADS: Thread[] = [
-  {
-    id: '1',
-    accountId: 'acc1',
-    subject: 'Welcome to the new Mailspring',
-    snippet: 'We are excited to announce the complete redesign of Mailspring with a modern stack...',
-    unread: true,
-    starred: true,
-    version: 1,
-    folders: [],
-    labels: [],
-    participants: [{ id: 'c1', accountId: 'acc1', name: 'Mailspring Team', email: 'team@mailspring.com' }],
-    attachmentCount: 0,
-    firstMessageTimestamp: Date.now() - 3600000,
-    lastMessageReceivedTimestamp: Date.now() - 3600000,
-    lastMessageSentTimestamp: 0,
-    inAllMail: true,
-  },
-  {
-    id: '2',
-    accountId: 'acc1',
-    subject: 'Q2 Planning Document',
-    snippet: 'Hi team, I have attached the Q2 planning document for your review. Please take a look...',
-    unread: true,
-    starred: false,
-    version: 1,
-    folders: [],
-    labels: [],
-    participants: [{ id: 'c2', accountId: 'acc1', name: 'Sarah Chen', email: 'sarah@example.com' }],
-    attachmentCount: 2,
-    firstMessageTimestamp: Date.now() - 7200000,
-    lastMessageReceivedTimestamp: Date.now() - 7200000,
-    lastMessageSentTimestamp: 0,
-    inAllMail: true,
-  },
-  {
-    id: '3',
-    accountId: 'acc1',
-    subject: 'Re: Design review feedback',
-    snippet: 'Thanks for the feedback! I will incorporate the changes and share the updated mockups...',
-    unread: false,
-    starred: false,
-    version: 1,
-    folders: [],
-    labels: [],
-    participants: [
-      { id: 'c3', accountId: 'acc1', name: 'Alex Rivera', email: 'alex@example.com' },
-      { id: 'c4', accountId: 'acc1', name: 'Jordan Park', email: 'jordan@example.com' },
-    ],
-    attachmentCount: 0,
-    firstMessageTimestamp: Date.now() - 86400000,
-    lastMessageReceivedTimestamp: Date.now() - 86400000,
-    lastMessageSentTimestamp: 0,
-    inAllMail: true,
-  },
-  {
-    id: '4',
-    accountId: 'acc1',
-    subject: 'Invoice #4521 - March 2026',
-    snippet: 'Please find attached the invoice for services rendered in March 2026. Payment is due...',
-    unread: false,
-    starred: false,
-    version: 1,
-    folders: [],
-    labels: [],
-    participants: [{ id: 'c5', accountId: 'acc1', name: 'Billing', email: 'billing@acme.com' }],
-    attachmentCount: 1,
-    firstMessageTimestamp: Date.now() - 172800000,
-    lastMessageReceivedTimestamp: Date.now() - 172800000,
-    lastMessageSentTimestamp: 0,
-    inAllMail: true,
-  },
-  {
-    id: '5',
-    accountId: 'acc1',
-    subject: 'Weekend hiking trip',
-    snippet: "Hey! Are you still up for the hiking trip this weekend? The weather forecast looks great...",
-    unread: false,
-    starred: true,
-    version: 1,
-    folders: [],
-    labels: [],
-    participants: [{ id: 'c6', accountId: 'acc1', name: 'Emma Wilson', email: 'emma@example.com' }],
-    attachmentCount: 0,
-    firstMessageTimestamp: Date.now() - 259200000,
-    lastMessageReceivedTimestamp: Date.now() - 259200000,
-    lastMessageSentTimestamp: 0,
-    inAllMail: true,
-  },
-];
 
 function formatRelativeDate(timestamp: number): string {
   const now = Date.now();
@@ -188,27 +97,40 @@ function ThreadListItem({
 
 export function ThreadList() {
   const { focusedThread, setFocusedThread } = useFocusStore();
+  const { threads, loading, perspectiveName } = useThreadStore();
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
       {/* List header */}
       <div className="no-select flex h-[49px] items-center justify-between border-b border-border px-3">
-        <h2 className="text-sm font-medium text-foreground">Inbox</h2>
-        <span className="text-xs text-muted-foreground">{MOCK_THREADS.length} threads</span>
+        <h2 className="text-sm font-medium text-foreground">{perspectiveName}</h2>
+        <span className="text-xs text-muted-foreground">
+          {loading ? '' : `${threads.length} threads`}
+        </span>
       </div>
 
       {/* Thread items */}
       <ScrollArea className="flex-1">
-        <div className="space-y-0.5 overflow-hidden p-1">
-          {MOCK_THREADS.map((thread) => (
-            <ThreadListItem
-              key={thread.id}
-              thread={thread}
-              active={focusedThread?.id === thread.id}
-              onClick={() => setFocusedThread(thread)}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : threads.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <p className="text-sm text-muted-foreground">No threads</p>
+          </div>
+        ) : (
+          <div className="space-y-0.5 overflow-hidden p-1">
+            {threads.map((thread) => (
+              <ThreadListItem
+                key={thread.id}
+                thread={thread}
+                active={focusedThread?.id === thread.id}
+                onClick={() => setFocusedThread(thread)}
+              />
+            ))}
+          </div>
+        )}
       </ScrollArea>
     </div>
   );

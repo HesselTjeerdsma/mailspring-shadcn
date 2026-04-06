@@ -13,12 +13,19 @@ import {
   Plus,
   User,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
 import { useAccountStore } from '@/stores/account-store';
 import { useMailboxStore } from '@/stores/mailbox-store';
 import { cn } from '@/lib/utils';
+import {
+  isMailspringAvailable,
+  getActions,
+  getMailboxPerspective,
+  getCategoryStore,
+  getAccountStore,
+} from '@/lib/mailspring-exports';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -71,10 +78,48 @@ function SidebarSection({ title, children, defaultOpen = true }: SidebarSectionP
   );
 }
 
+function focusPerspectiveByRole(role: string) {
+  if (!isMailspringAvailable()) return;
+  try {
+    const Perspective = getMailboxPerspective();
+    const catStore = getCategoryStore();
+    const accountIds = getAccountStore().accountIds();
+
+    if (role === 'starred') {
+      const perspective = Perspective.forStarred(accountIds);
+      getActions().focusMailboxPerspective(perspective);
+      return;
+    }
+
+    if (role === 'drafts') {
+      const perspective = Perspective.forDrafts(accountIds);
+      getActions().focusMailboxPerspective(perspective);
+      return;
+    }
+
+    // For category-based perspectives (inbox, sent, archive, spam, trash)
+    const categories = accountIds
+      .map((id: string) => catStore.getCategoryByRole(id, role))
+      .filter(Boolean);
+
+    if (categories.length > 0) {
+      const perspective = Perspective.forCategories(categories);
+      getActions().focusMailboxPerspective(perspective);
+    }
+  } catch (err) {
+    console.warn('Failed to focus perspective:', role, err);
+  }
+}
+
 export function Sidebar() {
   const { accounts } = useAccountStore();
   const { selectedCategory, selectCategory } = useMailboxStore();
   const [activeItem, setActiveItem] = useState('inbox');
+
+  const handleNavClick = useCallback((role: string) => {
+    setActiveItem(role);
+    focusPerspectiveByRole(role);
+  }, []);
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
@@ -100,43 +145,43 @@ export function Sidebar() {
             icon={<Inbox className="h-4 w-4" />}
             label="Inbox"
             active={activeItem === 'inbox'}
-            onClick={() => setActiveItem('inbox')}
+            onClick={() => handleNavClick('inbox')}
           />
           <SidebarItem
             icon={<Star className="h-4 w-4" />}
             label="Starred"
             active={activeItem === 'starred'}
-            onClick={() => setActiveItem('starred')}
+            onClick={() => handleNavClick('starred')}
           />
           <SidebarItem
             icon={<Send className="h-4 w-4" />}
             label="Sent"
             active={activeItem === 'sent'}
-            onClick={() => setActiveItem('sent')}
+            onClick={() => handleNavClick('sent')}
           />
           <SidebarItem
             icon={<FileEdit className="h-4 w-4" />}
             label="Drafts"
             active={activeItem === 'drafts'}
-            onClick={() => setActiveItem('drafts')}
+            onClick={() => handleNavClick('drafts')}
           />
           <SidebarItem
             icon={<Archive className="h-4 w-4" />}
             label="Archive"
             active={activeItem === 'archive'}
-            onClick={() => setActiveItem('archive')}
+            onClick={() => handleNavClick('archive')}
           />
           <SidebarItem
             icon={<AlertCircle className="h-4 w-4" />}
             label="Spam"
             active={activeItem === 'spam'}
-            onClick={() => setActiveItem('spam')}
+            onClick={() => handleNavClick('spam')}
           />
           <SidebarItem
             icon={<Trash2 className="h-4 w-4" />}
             label="Trash"
             active={activeItem === 'trash'}
-            onClick={() => setActiveItem('trash')}
+            onClick={() => handleNavClick('trash')}
           />
         </SidebarSection>
 

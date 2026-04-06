@@ -4,6 +4,8 @@ import {
   isMailspringAvailable,
   getFocusedContentStore,
   getActions,
+  getThread,
+  getMessage,
 } from '@/lib/mailspring-exports';
 
 interface FocusStoreState {
@@ -51,14 +53,24 @@ export const useFocusStore = create<FocusStoreState>((set) => {
 
     setFocusedThread: (thread) => {
       if (isMailspringAvailable() && thread) {
-        getActions().setFocus({ collection: 'thread', item: thread });
+        // Wrap plain objects as Thread model instances — FocusedContentStore
+        // requires items that pass `instanceof Model`.
+        const ThreadClass = getThread();
+        const item =
+          thread instanceof ThreadClass ? thread : new ThreadClass(thread);
+        getActions().setFocus({ collection: 'thread', item });
       }
       set({ focusedThread: thread });
     },
 
     setFocusedMessage: (message) => {
       if (isMailspringAvailable() && message) {
-        getActions().setFocus({ collection: 'message', item: message });
+        const MessageClass = getMessage();
+        const item =
+          message instanceof MessageClass
+            ? message
+            : new MessageClass(message);
+        getActions().setFocus({ collection: 'message', item });
       }
       set({ focusedMessage: message });
     },
