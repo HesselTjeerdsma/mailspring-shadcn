@@ -5,71 +5,150 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build and Development Commands
 
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (uses pnpm)
+pnpm install
 
-# Run the app in development mode (uses --dev flag, data stored in Mailspring-dev folder)
-npm start
+# --- Original UI (React 16 + Reflux + LESS) ---
+
+# Run the original app in development mode
+pnpm start
 
 # Run with specific language locale
-npm start -- --lang=de
+pnpm start -- --lang=de
 
 # Run linting (prettier + eslint)
-npm run lint
+pnpm lint
 
 # Run all tests
-npm test
+pnpm test
 
 # Run window-specific tests
-npm test-window
+pnpm test-window
 
-# TypeScript type checking in watch mode
-npm run tsc-watch
+# TypeScript type checking (original app) in watch mode
+pnpm tsc-watch
 
-# Build for production
-npm run build
+# Build original app for production
+pnpm build
+
+# --- New UI (React 18 + shadcn/ui + Tailwind CSS) ---
+
+# Dev server with HMR (standalone, uses mock data, no Electron)
+pnpm dev:ui
+
+# Build new UI to dist/
+pnpm build:ui
+
+# Preview production build
+pnpm preview:ui
+
+# Run Electron with new UI (builds first, uses --new-ui flag)
+pnpm start:new-ui
+
+# TypeScript type checking (new UI)
+pnpm typecheck:ui
 ```
 
 ## Architecture Overview
 
-Mailspring is an Electron-based email client written in TypeScript with React. It uses a plugin architecture where features are implemented as internal packages.
+Mailspring is an Electron-based email client. The project has two coexisting frontend stacks:
+
+1. **Original UI** (`app/`) — React 16, Reflux stores, LESS styles, Grunt build
+2. **New UI** (`src/`) — React 18, Zustand stores, Tailwind CSS + shadcn/ui, Vite build
+
+Both share the same backend: a C++ sync engine (`mailsync`) that handles IMAP/SMTP, and a read-only SQLite database accessed via `better-sqlite3`.
 
 ### Key Directories
 
-- **`app/src/`** - Core application source code
-  - `browser/` - Main process code (application lifecycle, window management, auto-updates)
-  - `flux/` - Flux-based state management (actions, stores, models, tasks)
-  - `components/` - Reusable React UI components
-  - `services/` - Application services (search, sanitization, etc.)
-  - `registries/` - Extension registries (components, extensions, database objects)
-  - `global/` - Global exports (`mailspring-exports`, `mailspring-component-kit`)
+- **`app/`** — Original application (kept intact as reference and for the Electron main process)
+  - `src/browser/` — Electron main process (application lifecycle, window management, auto-updates)
+  - `src/flux/` — Flux-based state management (actions, stores, models, tasks)
+  - `src/flux/models/` — Data models: Thread, Message, Contact, Account, Folder, Label, etc.
+  - `src/flux/stores/` — Application state: DatabaseStore, AccountStore, CategoryStore, etc.
+  - `src/flux/tasks/` — Async operations: SendDraftTask, ChangeFolderTask, etc.
+  - `src/flux/actions.ts` — Application-wide action dispatcher
+  - `src/components/` — Original React 16 UI components
+  - `src/global/` — Global exports (`mailspring-exports`, `mailspring-component-kit`)
+  - `static/` — HTML entry points (`index.html` for original, `index-v2.html` for new UI)
+  - `internal_packages/` — Built-in plugins implementing features
 
-- **`app/internal_packages/`** - Built-in plugins implementing features (composer, message-list, thread-list, preferences, themes, etc.)
+- **`src/`** — New frontend (React 18 + shadcn/ui + Tailwind)
+  - `components/ui/` — shadcn/ui primitives (Button, ScrollArea, Separator, Tooltip)
+  - `components/layout/` — App shell (AppLayout, Sidebar, Toolbar)
+  - `components/threads/` — Thread list view
+  - `components/messages/` — Message detail view
+  - `components/composer/` — Email composer (planned)
+  - `components/search/` — Search interface (planned)
+  - `components/settings/` — Settings panel (planned)
+  - `components/ai/` — AI feature components (planned)
+  - `stores/` — Zustand stores wrapping the existing data layer
+  - `hooks/` — Custom React hooks
+  - `lib/` — Utilities, Mailspring bridge, helpers
+  - `types/` — TypeScript type definitions for Mailspring models
+  - `styles/` — Tailwind CSS theme and global styles
 
-> **IMPORTANT:** Application source code lives in **both** `app/src/` and `app/internal_packages/`. When searching for usages of a module, symbol, or pattern, always search both directories. Searching only `app/src/` will miss a large portion of the codebase and lead to incomplete changes.
+- **`mailsync/`** — C++ sync engine (git submodule, **DO NOT MODIFY**)
 
-- **`app/spec/`** - Jasmine test specs
+> **IMPORTANT:** When searching for usages across the codebase, search both `app/src/`, `app/internal_packages/`, and `src/`. The original code lives in `app/`, the new UI lives in `src/`.
 
-### Core Modules
+### New UI Stack
 
-**Global exports for plugins:**
-- `mailspring-exports` - Core APIs: Actions, Stores, Models, Tasks, Utils, database access
-- `mailspring-component-kit` - Reusable UI components
+| Layer | Technology | Notes |
+|-------|-----------|-------|
+| Framework | React 18 | Strict mode, functional components only |
+| State | Zustand | Wraps existing Reflux stores via `window.$m` bridge |
+| Styling | Tailwind CSS 4 + shadcn/ui | Design tokens in `src/styles/globals.css` |
+| Bundler | Vite 8 | Config in `vite.config.ts`, builds to `dist/` |
+| Icons | Lucide React | Consistent icon set |
+| Layout | react-resizable-panels v4 | Three-column resizable layout |
+| Types | TypeScript (strict) | Separate tsconfig at `src/tsconfig.json` |
 
-**Flux Architecture:**
-- **Models** (`flux/models/`) - Data models: Message, Thread, Contact, Account, Folder, Label, etc.
-- **Stores** (`flux/stores/`) - Application state: DatabaseStore, DraftStore, AccountStore, etc.
-- **Tasks** (`flux/tasks/`) - Async operations: SendDraftTask, ChangeFolderTask, etc.
-- **Actions** (`flux/actions.ts`) - Application-wide action dispatcher
+### Bridge Layer (`src/lib/`)
 
-### Plugin Structure
+The new UI communicates with the existing Mailspring infrastructure through a bridge:
 
-Each plugin in `internal_packages/` has:
-- `package.json` - Metadata with `windowTypes` specifying where plugin loads
-- `lib/main.ts` - Entry point with `activate()` and `deactivate()` lifecycle hooks
-- `lib/` - Plugin source code
-- `styles/` - LESS stylesheets
-- `keymaps/` - Keyboard shortcut definitions
+- **`mailspring-exports.ts`** — Provides typed lazy accessors to the global `window.$m` object (which is set by the original bootstrap). Exposes `getAccountStore()`, `getDatabaseStore()`, `getActions()`, etc.
+- **`mailspring-provider.tsx`** — React context that gates the app on bridge readiness. When running standalone via `pnpm dev:ui`, stores use mock data. When running inside Electron via `pnpm start:new-ui`, stores connect to real Reflux stores.
+
+### Zustand Stores (`src/stores/`)
+
+Each Zustand store wraps a corresponding Reflux store:
+
+| Zustand Store | Wraps | Purpose |
+|--------------|-------|---------|
+| `useAccountStore` | `AccountStore` | Accounts list, selected account |
+| `useMailboxStore` | `CategoryStore` | Folders, labels, selected category |
+| `useFocusStore` | `FocusedContentStore` | Currently focused thread/message |
+| `useUIStore` | (standalone) | Layout mode, sidebar, theme, command palette |
+
+Stores subscribe to Reflux store `trigger()` events and sync state automatically.
+
+### Electron Integration
+
+The `--new-ui` command-line flag switches between old and new UI:
+
+- **`app/src/browser/window-manager.ts`** — Selects `window-bootstrap-v2.ts` as bootstrap script when `--new-ui` is present
+- **`app/src/browser/mailspring-window.ts`** — Loads `index-v2.html` instead of `index.html` when `--new-ui` is present
+- **`app/src/window-bootstrap-v2.ts`** — Initializes AppEnv (which sets up all Reflux stores, MailsyncBridge, and DatabaseStore), then the Vite-built bundle is loaded from `dist/`
+- **`app/static/index-v2.html`** — HTML entry point that runs the old bootstrap for infrastructure, then loads the new React 18 app from `dist/`
+
+```
+┌─ Electron Main Process ─────────────────────────────┐
+│  app/src/browser/main.js                             │
+│  └─ application.ts → WindowManager                   │
+│       └─ --new-ui? → window-bootstrap-v2.ts          │
+│                       └─ AppEnv (stores, mailsync)   │
+│                       └─ loads dist/ (Vite bundle)   │
+├──────────────────────────────────────────────────────┤
+│  New Renderer (React 18)                             │
+│  src/main.tsx → App → AppLayout                      │
+│  └─ Zustand stores ← window.$m ← Reflux stores      │
+│                                    ↕                 │
+│                              MailsyncBridge           │
+│                                    ↕                 │
+│                           mailsync (C++ process)     │
+└──────────────────────────────────────────────────────┘
+```
 
 ## Core Data Flow: Sync Engine, Tasks, and Observable Database
 
@@ -197,12 +276,29 @@ User Action → Actions.queueTask() → MailsyncBridge → stdin → Sync Engine
 UI Updates ← QuerySubscription ← DatabaseStore.trigger() ← stdout deltas
 ```
 
+In the new UI, the same flow applies but Zustand stores subscribe to Reflux store triggers instead of using QuerySubscription directly.
+
+## Design System (New UI)
+
+The new UI uses Tailwind CSS 4 with custom design tokens defined in `src/styles/globals.css`:
+
+- **Font**: Inter (with system-ui fallback)
+- **Radius**: `rounded-md` (6px) for inputs/buttons, `rounded-lg` (8px) for cards
+- **Colors**: Neutral gray scale with CSS custom properties for light/dark mode
+- **Dark mode**: Supported via `.dark` class on `<html>` + Tailwind `dark:` variant
+- **Scrollbars**: Custom styled, 6px width
+- **Aesthetic**: Clean and minimal, inspired by Linear (monochrome + accent, good typography, generous whitespace)
+
+shadcn/ui components are installed in `src/components/ui/` and follow the standard shadcn/ui patterns with the `cn()` utility from `src/lib/utils.ts`.
+
 ## Development Notes
 
-- Hot reload is available via `CTRL+R` (Windows/Linux) or `CMD+R` (macOS)
+- Hot reload is available via `CTRL+R` (Windows/Linux) or `CMD+R` (macOS) in the original UI
+- The new UI uses Vite HMR when running `pnpm dev:ui`
 - Dev tools accessible via Menu > Developer > Toggle Developer Tools
 - In dev tools console, `$m` provides access to `mailspring-exports` for debugging
 - Dev mode data is stored separately (e.g., `~/.config/Mailspring-dev/` on Linux)
+- The project uses pnpm with `shamefully-hoist=true` (required for Electron's `nodeIntegration`) and `strict-peer-dependencies=false` (for mixed React 16/18 during migration)
 
 ## Claude Hooks
 
@@ -215,7 +311,7 @@ Run linting after modifying TypeScript or JavaScript files.
   "hooks": {
     "after_edit": [
       {
-        "command": "npm run lint",
+        "command": "pnpm lint",
         "file_paths": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
       }
     ]

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" style="background: #fff">
+<head>
+  <title>Mailspring</title>
+
+  <meta http-equiv="Content-Security-Policy" content="default-src * mailspring:; script-src 'self' 'unsafe-inline' chrome-extension://react-developer-tools; style-src * 'unsafe-inline' mailspring:; img-src * data: mailspring: file:; object-src none; media-src mailspring:; manifest-src none;">
+
+  <!-- Load old bootstrap first to initialize AppEnv, MailsyncBridge, etc. -->
+  <script src="index.js"></script>
+</head>
+<body>
+  <!-- Root for the new React 18 app -->
+  <div id="root"></div>
+
+  <!-- Load the Vite-built new UI bundle -->
+  <!-- In production this comes from dist/, in dev use vite dev server -->
+  <script type="module">
+    // Wait for AppEnv to be available, then load the new UI
+    function loadNewUI() {
+      if (window.AppEnv) {
+        // Import the new UI entry point
+        import('../../dist/assets/main.js').catch(err => {
+          console.error('Failed to load new UI bundle:', err);
+          document.getElementById('root').innerHTML =
+            '<div style="padding: 2rem; font-family: system-ui;">' +
+            '<h2>New UI failed to load</h2>' +
+            '<p>Run <code>npm run build:ui</code> first to build the new frontend.</p>' +
+            '<pre>' + err.message + '</pre></div>';
+        });
+      } else {
+        setTimeout(loadNewUI, 50);
+      }
+    }
+    // Small delay to let AppEnv initialize
+    setTimeout(loadNewUI, 100);
+  </script>
+</body>
+</html>

@@ -249,7 +249,9 @@ export default class MailspringWindow extends EventEmitter {
 
     return url.format({
       protocol: 'file',
-      pathname: `${this.resourcePath}/static/index.html`,
+      pathname: process.argv.includes('--new-ui')
+        ? `${this.resourcePath}/static/index-v2.html`
+        : `${this.resourcePath}/static/index.html`,
       slashes: true,
       query: { loadSettings: JSON.stringify(loadSettings) },
     });

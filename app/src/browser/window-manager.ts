@@ -246,7 +246,9 @@ export default class WindowManager {
       title: localized('Message Viewer'),
       toolbar: true,
       neverClose: true,
-      bootstrapScript: require.resolve('../window-bootstrap'),
+      bootstrapScript: process.argv.includes('--new-ui')
+        ? require.resolve('../window-bootstrap-v2')
+        : require.resolve('../window-bootstrap'),
       mainWindow: true,
       width: 900, // Gets changed based on previous settings
       height: 600, // Gets changed based on previous settings
