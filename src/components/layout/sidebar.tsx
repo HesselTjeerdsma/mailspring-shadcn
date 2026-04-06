@@ -12,10 +12,13 @@ import {
   ChevronRight,
   Plus,
   User,
+  Settings,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { useAccountStore } from '@/stores/account-store';
 import { useMailboxStore } from '@/stores/mailbox-store';
 import { cn } from '@/lib/utils';
@@ -25,6 +28,7 @@ import {
   getMailboxPerspective,
   getCategoryStore,
   getAccountStore,
+  sendCommand,
 } from '@/lib/mailspring-exports';
 
 interface SidebarItemProps {
@@ -111,6 +115,38 @@ function focusPerspectiveByRole(role: string) {
   }
 }
 
+function openAccountPreferences() {
+  if (!isMailspringAvailable()) return;
+  try {
+    getActions().switchPreferencesTab('Accounts');
+    getActions().openPreferences();
+  } catch (err) {
+    console.warn('Failed to open account preferences:', err);
+  }
+}
+
+function addAccount() {
+  sendCommand('application:add-account');
+}
+
+function openPreferences() {
+  if (!isMailspringAvailable()) return;
+  try {
+    getActions().openPreferences();
+  } catch (err) {
+    console.warn('Failed to open preferences:', err);
+  }
+}
+
+/** Returns 1-2 initials from an account name */
+function getInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 export function Sidebar() {
   const { accounts } = useAccountStore();
   const { selectedCategory, selectCategory } = useMailboxStore();
@@ -136,6 +172,17 @@ export function Sidebar() {
             {accounts.length > 0 ? accounts[0].emailAddress : 'No accounts'}
           </p>
         </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={openPreferences}
+              className="flex h-6 w-6 items-center justify-center rounded-md text-sidebar-muted hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">Preferences</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Navigation */}
@@ -195,6 +242,37 @@ export function Sidebar() {
           <div className="px-2 py-2 text-xs text-sidebar-muted">
             Folders will appear here once connected to an account.
           </div>
+        </SidebarSection>
+
+        <SidebarSection title="Accounts">
+          {accounts.map((account) => (
+            <button
+              key={account.id}
+              onClick={openAccountPreferences}
+              className="no-select flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors group"
+            >
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium text-white shrink-0"
+                style={{
+                  backgroundColor: account.color || 'var(--color-primary)',
+                }}
+              >
+                {getInitials(account.name)}
+              </span>
+              <span className="flex-1 truncate text-left">{account.emailAddress}</span>
+              {account.syncState !== 'ok' && (
+                <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              )}
+              <Settings className="h-3.5 w-3.5 text-sidebar-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </button>
+          ))}
+          <button
+            onClick={addAccount}
+            className="no-select flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-sidebar-muted hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Account</span>
+          </button>
         </SidebarSection>
       </ScrollArea>
     </div>

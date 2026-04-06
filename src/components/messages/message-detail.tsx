@@ -15,6 +15,7 @@ import {
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
+import { InlineComposer } from '../composer/inline-composer';
 import { useFocusStore } from '@/stores/focus-store';
 import type { Message } from '@/types/models';
 import {
@@ -23,6 +24,8 @@ import {
   getTaskFactory,
   getMessageStore,
 } from '@/lib/mailspring-exports';
+
+type ComposeMode = 'reply' | 'reply-all' | 'forward';
 
 function bridgeAction(fn: () => void) {
   if (!isMailspringAvailable()) return;
@@ -172,6 +175,7 @@ function EmptyState() {
 export function MessageDetail() {
   const { focusedThread } = useFocusStore();
   const { messages, loading } = useMessages();
+  const [composeMode, setComposeMode] = useState<ComposeMode | null>(null);
 
   // Filter messages to those belonging to the focused thread
   const threadMessages = focusedThread
@@ -179,38 +183,20 @@ export function MessageDetail() {
     : [];
   const hasRealMessages = isMailspringAvailable() && threadMessages.length > 0;
 
+  // Close composer when thread changes
+  useEffect(() => {
+    setComposeMode(null);
+  }, [focusedThread?.id]);
+
   if (!focusedThread) {
     return <EmptyState />;
   }
 
   const lastMessage = threadMessages.length > 0 ? threadMessages[threadMessages.length - 1] : undefined;
 
-  const handleReply = () =>
-    bridgeAction(() =>
-      getActions().composeReply({
-        thread: focusedThread,
-        message: lastMessage,
-        type: 'reply',
-        behavior: 'prefer-existing',
-        popout: true,
-      })
-    );
-
-  const handleReplyAll = () =>
-    bridgeAction(() =>
-      getActions().composeReply({
-        thread: focusedThread,
-        message: lastMessage,
-        type: 'reply-all',
-        behavior: 'prefer-existing',
-        popout: true,
-      })
-    );
-
-  const handleForward = () =>
-    bridgeAction(() =>
-      getActions().composeForward({ thread: focusedThread, message: lastMessage, popout: true })
-    );
+  const handleReply = () => setComposeMode('reply');
+  const handleReplyAll = () => setComposeMode('reply-all');
+  const handleForward = () => setComposeMode('forward');
 
   const handlePopout = () =>
     bridgeAction(() => getActions().popoutThread(focusedThread));
@@ -337,26 +323,38 @@ export function MessageDetail() {
               </div>
             </div>
           )}
+
+          {/* Inline composer */}
+          {composeMode && (
+            <InlineComposer
+              thread={focusedThread}
+              message={lastMessage}
+              mode={composeMode}
+              onClose={() => setComposeMode(null)}
+            />
+          )}
         </div>
       </ScrollArea>
 
-      {/* Reply bar */}
-      <div className="no-select border-t border-border bg-background px-5 py-2">
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleReply}>
-            <Reply className="h-4 w-4" />
-            Reply
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleReplyAll}>
-            <ReplyAll className="h-4 w-4" />
-            Reply All
-          </Button>
-          <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleForward}>
-            <Forward className="h-4 w-4" />
-            Forward
-          </Button>
+      {/* Reply bar — hidden when composer is open */}
+      {!composeMode && (
+        <div className="no-select border-t border-border bg-background px-5 py-2">
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleReply}>
+              <Reply className="h-4 w-4" />
+              Reply
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleReplyAll}>
+              <ReplyAll className="h-4 w-4" />
+              Reply All
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5" onClick={handleForward}>
+              <Forward className="h-4 w-4" />
+              Forward
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

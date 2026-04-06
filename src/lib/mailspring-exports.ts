@@ -56,3 +56,21 @@ export const getCategoryStoreInstance = () => getMailspring().CategoryStore;
 export function isMailspringAvailable(): boolean {
   return typeof window !== 'undefined' && !!(window as any).$m;
 }
+
+/**
+ * Send a command to the Electron main process via ipcRenderer.
+ * Only works when running inside Electron.
+ */
+export function sendCommand(command: string, args?: Record<string, unknown>) {
+  if (!isMailspringAvailable()) return;
+  try {
+    const { ipcRenderer } = (window as any).require('electron');
+    if (args) {
+      ipcRenderer.send('command', command, args);
+    } else {
+      ipcRenderer.send('command', command);
+    }
+  } catch (err) {
+    console.warn('Failed to send command:', command, err);
+  }
+}

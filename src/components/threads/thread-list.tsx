@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Star, Paperclip, Loader2 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { useFocusStore } from '@/stores/focus-store';
@@ -18,6 +19,42 @@ function formatRelativeDate(timestamp: number): string {
   if (hours < 24) return `${hours}h`;
   if (days < 7) return `${days}d`;
   return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function getDateGroup(timestamp: number): string {
+  const now = new Date();
+  const date = new Date(timestamp);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const weekStart = new Date(today.getTime() - today.getDay() * 86400000);
+  const lastWeekStart = new Date(weekStart.getTime() - 7 * 86400000);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  if (date >= today) return 'Today';
+  if (date >= yesterday) return 'Yesterday';
+  if (date >= weekStart) return 'This Week';
+  if (date >= lastWeekStart) return 'Last Week';
+  if (date >= monthStart) return 'This Month';
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString(undefined, { month: 'long' });
+  }
+  return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+type ThreadGroup = { label: string; threads: Thread[] };
+
+function groupThreadsByDate(threads: Thread[]): ThreadGroup[] {
+  const groups: ThreadGroup[] = [];
+  let currentLabel = '';
+  for (const thread of threads) {
+    const label = getDateGroup(thread.lastMessageReceivedTimestamp);
+    if (label !== currentLabel) {
+      currentLabel = label;
+      groups.push({ label, threads: [] });
+    }
+    groups[groups.length - 1].threads.push(thread);
+  }
+  return groups;
 }
 
 function ThreadListItem({
@@ -98,6 +135,7 @@ function ThreadListItem({
 export function ThreadList() {
   const { focusedThread, setFocusedThread } = useFocusStore();
   const { threads, loading, perspectiveName } = useThreadStore();
+  const groups = useMemo(() => groupThreadsByDate(threads), [threads]);
 
   return (
     <div className="flex h-full min-w-0 flex-col overflow-hidden">
@@ -120,14 +158,23 @@ export function ThreadList() {
             <p className="text-sm text-muted-foreground">No threads</p>
           </div>
         ) : (
-          <div className="space-y-0.5 overflow-hidden p-1">
-            {threads.map((thread) => (
-              <ThreadListItem
-                key={thread.id}
-                thread={thread}
-                active={focusedThread?.id === thread.id}
-                onClick={() => setFocusedThread(thread)}
-              />
+          <div className="overflow-hidden p-1">
+            {groups.map((group) => (
+              <div key={group.label}>
+                <div className="no-select sticky top-0 z-10 bg-background/95 backdrop-blur-sm px-3 py-1.5 mt-1 first:mt-0">
+                  <span className="text-xs font-medium text-muted-foreground">{group.label}</span>
+                </div>
+                <div className="space-y-0.5">
+                  {group.threads.map((thread) => (
+                    <ThreadListItem
+                      key={thread.id}
+                      thread={thread}
+                      active={focusedThread?.id === thread.id}
+                      onClick={() => setFocusedThread(thread)}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
